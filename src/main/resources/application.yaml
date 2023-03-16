@@ -1,13 +1,13 @@
 telegram:
-  api-url: ${TELEGRAMURL}
+  api-url: https://api.telegram.org/
   bot:
-    name: ${TELEGRAMNAME}
-    token: ${TELEGRAMTOKEN}
+    name: ${TELEGRAMNAME:bot}
+    token: ${TELEGRAMTOKEN:token}
 spring:
   data:
     mongodb:
-      uri: ${DBURL}
-      username: ${DBUSER}
-      database: ${DBNAME}
+      uri: mongodb://${DBURL:localhost}:27017
+      username: ${DBUSER:admin}
+      database: ${DBNAME:bot}
   jpa:
     generate-ddl: true
