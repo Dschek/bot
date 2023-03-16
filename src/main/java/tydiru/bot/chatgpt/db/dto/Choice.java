@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Data
 public class Choice {
-    String index;
+    int index;
     Message message;
     String finishReason;
 }

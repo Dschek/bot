@@ -1,31 +1,29 @@
 package tydiru.bot.chatgpt.service;
 
 import lombok.Data;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import tydiru.bot.chatgpt.config.Config;
+import tydiru.bot.chatgpt.db.dto.ChatGPTRequest;
+import tydiru.bot.chatgpt.db.dto.Message;
 import tydiru.bot.chatgpt.db.dto.Users;
 import tydiru.bot.chatgpt.db.repository.UserRepository;
+import java.util.List;
 
 @Component
 @Data
+@RequiredArgsConstructor
 public class Telegram extends TelegramLongPollingBot {
     private final UserRepository userRepository;
-    private Config config;
+    private final ChatRestClient chatRestClient;
+    private final Config config;
+
     private String gptToken;
     private Boolean isAuth = false;
-
-    @Autowired
-    public Telegram(Config config, UserRepository userRepository) {
-        this.config = config;
-        this.userRepository = userRepository;
-    }
 
     @Override
     public void onUpdateReceived(Update update) {
@@ -53,10 +51,13 @@ public class Telegram extends TelegramLongPollingBot {
                     saveUser(telegramChatId, messageText);
                     message.setText(saveUser(telegramChatId, messageText)?"Токен успешно добавлен":"Извините, не удалось сохранить токен");
                     break;
-                }else{
-                    message.setText(gptToken);
+                } else {
+                    ChatGPTRequest chatGPTRequest = new ChatGPTRequest();
+                    chatGPTRequest.setModel("gpt-3.5-turbo");
+                    chatGPTRequest.setMessages(List.of(new Message("user", messageText)));
+                    String response = chatRestClient.post(chatGPTRequest, gptToken).getBody().getChoices().get(0).getMessage().getContent();
+                    message.setText(response);
                 }
-
         }
         try {
             execute(message);

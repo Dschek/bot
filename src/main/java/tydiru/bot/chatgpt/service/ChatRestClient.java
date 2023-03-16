@@ -28,7 +28,7 @@ public class ChatRestClient {
 
 
 
-    public ChatGptResponse post(ChatGPTRequest request, String token) {
+    public ResponseEntity<ChatGptResponse> post(ChatGPTRequest request, String token) {
         RestTemplate restTemplate = new RestTemplate();
         String fooResourceUrl
                 = "https://api.openai.com/v1/chat/completions";
@@ -38,16 +38,9 @@ public class ChatRestClient {
 
         try {
             HttpEntity<ChatGPTRequest> requestEntity = new HttpEntity<>(request, headers);
-            ResponseEntity<String> response
-                    = restTemplate.exchange(fooResourceUrl, HttpMethod.POST, requestEntity, String.class);
-            JavaType javaType = objectMapper.getTypeFactory().constructType(ChatGptResponse.class);
-
-            return objectMapper.readValue(response.getBody(), javaType);
+            return restTemplate.exchange(fooResourceUrl, HttpMethod.POST, requestEntity, ChatGptResponse.class);
         } catch (HttpServerErrorException e) {
             log.error("Вызов завершился ошибкой с кодом {}: {}", e.getStatusCode(), e.getMessage());
-            return null;
-        } catch (JsonProcessingException e) {
-            log.error("Маппинг ответа завершился ошибкой : {}", e.getMessage());
             return null;
         }
     }

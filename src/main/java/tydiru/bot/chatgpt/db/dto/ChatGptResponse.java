@@ -11,6 +11,6 @@ public class ChatGptResponse {
     String id;
     String object;
     String created;
-    List<Choice> choises;
+    List<Choice> choices;
     Usage usage;
 }
