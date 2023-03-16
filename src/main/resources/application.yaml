@@ -3,3 +3,11 @@ telegram:
   bot:
     name: tydiruChatGPTBot
     token: 6265361916:AAEkQdqjKHsjUwJt2raTrXydR1wOSsg32ho
+spring:
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017
+      username: admin
+      database: bot
+  jpa:
+    generate-ddl: true

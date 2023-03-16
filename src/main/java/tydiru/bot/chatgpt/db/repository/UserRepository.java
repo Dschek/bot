@@ -1,7 +1,10 @@
 package tydiru.bot.chatgpt.db.repository;
 
-public class UserRepository {
-    public static String getToken(long telegramChatId){
-        return null;
-    }
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.stereotype.Repository;
+import tydiru.bot.chatgpt.db.dto.Users;
+
+@Repository
+public interface UserRepository extends MongoRepository<Users, String> {
+    Users findByTelegramChatId(String telegramChatId);
 }
