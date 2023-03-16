@@ -1,0 +1,5 @@
+telegram:
+  api-url: https://api.telegram.org/
+  bot:
+    name: tydiruChatGPTBot
+    token: 6265361916:AAEkQdqjKHsjUwJt2raTrXydR1wOSsg32ho
