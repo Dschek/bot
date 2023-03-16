@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  web:
+    container_name: restb
+    image: "docker.pkg.github.com/dschek/chatgpt/chatgpt:latest"
+    ports:
+      - "8080:8080"
+    networks:
+      - restb
+      - mongodb
+networks:
+  restb: {}
+  mongodb:
+    external: true

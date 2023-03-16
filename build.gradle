@@ -27,7 +27,7 @@ dependencies {
     implementation 'org.telegram:telegrambots:5.3.0'
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb:3.0.4'
 }
-
-tasks.named('test') {
-    useJUnitPlatform()
-}
+//
+//tasks.named('test') {
+//    useJUnitPlatform()
+//}
