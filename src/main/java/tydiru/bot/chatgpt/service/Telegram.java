@@ -10,8 +10,12 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import tydiru.bot.chatgpt.config.Config;
 import tydiru.bot.chatgpt.db.dto.ChatGPTRequest;
 import tydiru.bot.chatgpt.db.dto.Message;
+import tydiru.bot.chatgpt.db.dto.MongoMessage;
 import tydiru.bot.chatgpt.db.dto.Users;
+import tydiru.bot.chatgpt.db.repository.MongoMessageRepository;
 import tydiru.bot.chatgpt.db.repository.UserRepository;
+
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -21,6 +25,8 @@ public class Telegram extends TelegramLongPollingBot {
     private final UserRepository userRepository;
     private final ChatRestClient chatRestClient;
     private final Config config;
+
+    private final MongoMessageRepository mongoMessageRepository;
 
     private String gptToken;
     private Boolean isAuth = false;
@@ -54,9 +60,33 @@ public class Telegram extends TelegramLongPollingBot {
                 } else {
                     ChatGPTRequest chatGPTRequest = new ChatGPTRequest();
                     chatGPTRequest.setModel("gpt-3.5-turbo");
-                    chatGPTRequest.setMessages(List.of(new Message("user", messageText)));
-                    String response = chatRestClient.post(chatGPTRequest, gptToken).getBody().getChoices().get(0).getMessage().getContent();
-                    message.setText(response);
+                    Integer index = getUsersIndex(telegramChatId);
+                    if (index == 0) {
+                        mongoMessageRepository.save(new MongoMessage(telegramChatId, "user", messageText));
+                        chatGPTRequest.setMessages(List.of(new Message("user", messageText)));
+                        String response = chatRestClient.post(chatGPTRequest, gptToken).getBody().getChoices().get(0).getMessage().getContent();
+                        mongoMessageRepository.save(new MongoMessage(telegramChatId, "assistent", response));
+                        updateUser(telegramChatId,index+1);
+                        message.setText(response);
+                    } else if (index < 20) {
+                        message.setText("Извините, лимит чата исччерпан, необходимо отчистить чат командой /clean");
+                    } else {
+                        mongoMessageRepository.save(new MongoMessage(telegramChatId, "user", messageText));
+                        List<MongoMessage> mongoMessages = mongoMessageRepository.findByTelegramChatId(telegramChatId);
+                        List<Message> messages = new ArrayList<>();
+                        for (MongoMessage mongoMessage : mongoMessages) {
+                            Message chatMessage = new Message();
+                            chatMessage.setContent(mongoMessage.getContent());
+                            chatMessage.setRole(mongoMessage.getRole());
+                            messages.add(chatMessage);
+                        }
+                        chatGPTRequest.setMessages(messages);
+                        String response = chatRestClient.post(chatGPTRequest, gptToken).getBody().getChoices().get(0).getMessage().getContent();
+                        mongoMessageRepository.save(new MongoMessage(telegramChatId, "assistent", response));
+                        updateUser(telegramChatId,index+1);
+                        message.setText(response);
+                    }
+
                 }
         }
         try {
@@ -74,12 +104,23 @@ public class Telegram extends TelegramLongPollingBot {
 
     private boolean saveUser(String telegramChatId, String gptTokenId){
         try {
-            userRepository.save(new Users(telegramChatId, gptTokenId));
+            userRepository.save(new Users(telegramChatId, gptTokenId, 0));
         }catch (Exception e){
             System.out.println(e);
             return false;
         }
         return true;
+    }
+
+    private Integer getUsersIndex(String telegramChatId) {
+        Users users = userRepository.findByTelegramChatId(telegramChatId);
+        return users != null ? users.getCurrentMessageIndex() : -1;
+    }
+
+    private void updateUser(String telegramChatId, Integer currentMessageIndex) {
+        Users users = userRepository.findByTelegramChatId(telegramChatId);
+        users.setCurrentMessageIndex(currentMessageIndex);
+        userRepository.save(users);
     }
 
     @Override

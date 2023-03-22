@@ -10,9 +10,9 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @AllArgsConstructor
 @NoArgsConstructor
 @Document
-public class Users {
+public class MongoMessage {
     @Id
-    private String telegramChatId;
-    private String gptTokenId;
-    private Integer currentMessageIndex;
+    String telegramChatId;
+    String role;
+    String content;
 }
