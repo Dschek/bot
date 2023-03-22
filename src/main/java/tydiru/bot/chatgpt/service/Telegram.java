@@ -52,6 +52,9 @@ public class Telegram extends TelegramLongPollingBot {
             case "/reset":
                 message.setText(saveUser(telegramChatId, null)?"Токен успешно сброшен":"Извините, не удалось сбросить токен");
                 break;
+            case "/clear":
+                mongoMessageRepository.deleteById(telegramChatId);
+                break;
             default:
                 if (!checkGPTToken(telegramChatId)) {
                     saveUser(telegramChatId, messageText);
