@@ -6,7 +6,7 @@ telegram:
 spring:
   data:
     mongodb:
-      uri: mongodb://${DBURL:mongodb:27017}:27017
+      uri: mongodb://${DBURL:localhost}:27017
       username: ${DBUSER:admin}
       database: ${DBNAME:bot}
   jpa:
