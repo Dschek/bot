@@ -72,8 +72,6 @@ public class Telegram extends TelegramLongPollingBot {
                         updateUser(telegramChatId,index+1);
                         message.setText(response);
                     } else if (index < 20) {
-                        message.setText("Извините, лимит чата исччерпан, необходимо отчистить чат командой /clean");
-                    } else {
                         mongoMessageRepository.save(new MongoMessage(telegramChatId, "user", messageText));
                         List<MongoMessage> mongoMessages = mongoMessageRepository.findByTelegramChatId(telegramChatId);
                         List<Message> messages = new ArrayList<>();
@@ -88,8 +86,9 @@ public class Telegram extends TelegramLongPollingBot {
                         mongoMessageRepository.save(new MongoMessage(telegramChatId, "assistent", response));
                         updateUser(telegramChatId,index+1);
                         message.setText(response);
+                    } else {
+                        message.setText("Извините, лимит чата исччерпан, необходимо отчистить чат командой /clean");
                     }
-
                 }
         }
         try {
