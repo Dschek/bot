@@ -9,6 +9,12 @@ services:
     networks:
       - chatgpt
       - mongodb
+    environment:
+      - TELEGRAMNAME=$TELEGRAMNAME
+      - TELEGRAMTOKEN=$TELEGRAMTOKEN
+      - DBURL=$DBURL
+      - DBUSER=$DBUSER
+      - DBNAME=$DBNAME
 networks:
   chatgpt: {}
   mongodb:
