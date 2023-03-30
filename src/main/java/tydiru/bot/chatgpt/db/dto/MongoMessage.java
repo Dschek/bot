@@ -12,6 +12,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Document
 public class MongoMessage {
     @Id
+    String id;
     String telegramChatId;
     String role;
     String content;

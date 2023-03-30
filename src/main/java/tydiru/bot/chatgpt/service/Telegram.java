@@ -19,6 +19,7 @@ import tydiru.bot.chatgpt.db.repository.UserRepository;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Component
@@ -97,10 +98,10 @@ public class Telegram extends TelegramLongPollingBot {
     @Transactional
     String firstQuestion(ChatGPTRequest chatGPTRequest, String messageText, String telegramChatId, int index ) {
         chatGPTRequest.setMessages(List.of(new Message("user", messageText)));
-        String response = chatRestClient.post(chatGPTRequest, gptToken).getBody().getChoices().get(0).getMessage().getContent();
+        String response = postToGPT(chatGPTRequest, gptToken);
         mongoMessageRepository.saveAll(
-                List.of(new MongoMessage(telegramChatId, "user", messageText),
-                        new MongoMessage(telegramChatId, "assistant", response)));
+                List.of(new MongoMessage(UUID.randomUUID().toString(), telegramChatId, "user", messageText),
+                        new MongoMessage(UUID.randomUUID().toString(), telegramChatId, "assistant", response)));
 
         updateUser(telegramChatId,index+1);
         return response;
@@ -118,12 +119,16 @@ public class Telegram extends TelegramLongPollingBot {
         messages.add(new Message("user", messageText));
         chatGPTRequest.setMessages(messages);
         log.info("Отправляю запрос {}", chatGPTRequest);
-        String response = chatRestClient.post(chatGPTRequest, gptToken).getBody().getChoices().get(0).getMessage().getContent();
+        String response = postToGPT(chatGPTRequest, gptToken);
         mongoMessageRepository.saveAll(
-                List.of(new MongoMessage(telegramChatId, "user", messageText),
-                        new MongoMessage(telegramChatId, "assistant", response)));
+                List.of(new MongoMessage(UUID.randomUUID().toString(), telegramChatId, "user", messageText),
+                        new MongoMessage(UUID.randomUUID().toString(), telegramChatId, "assistant", response)));
         updateUser(telegramChatId,index+1);
         return response;
+    }
+
+    String postToGPT(ChatGPTRequest chatGPTRequest, String gptToken) {
+        return chatRestClient.post(chatGPTRequest, gptToken).getBody().getChoices().get(0).getMessage().getContent();
     }
 
     private boolean checkGPTToken(String telegramChatId) {
