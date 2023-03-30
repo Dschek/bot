@@ -94,14 +94,15 @@ public class Telegram extends TelegramLongPollingBot {
     String firstQuestion(ChatGPTRequest chatGPTRequest, String messageText, String telegramChatId, int index ) {
         chatGPTRequest.setMessages(List.of(new Message("user", messageText)));
         String response = chatRestClient.post(chatGPTRequest, gptToken).getBody().getChoices().get(0).getMessage().getContent();
-        mongoMessageRepository.save(new MongoMessage(telegramChatId, "user", messageText));
-        mongoMessageRepository.save(new MongoMessage(telegramChatId, "assistant", response));
+        mongoMessageRepository.saveAll(
+                List.of(new MongoMessage(telegramChatId, "user", messageText),
+                        new MongoMessage(telegramChatId, "assistant", response)));
+
         updateUser(telegramChatId,index+1);
         return response;
     }
     @Transactional
     String otherMessages(ChatGPTRequest chatGPTRequest, String messageText, String telegramChatId, int index) {
-        mongoMessageRepository.save(new MongoMessage(telegramChatId, "user", messageText));
         List<MongoMessage> mongoMessages = mongoMessageRepository.findByTelegramChatId(telegramChatId);
         List<Message> messages = new ArrayList<>();
         for (MongoMessage mongoMessage : mongoMessages) {
@@ -110,10 +111,13 @@ public class Telegram extends TelegramLongPollingBot {
             chatMessage.setRole(mongoMessage.getRole());
             messages.add(chatMessage);
         }
+        messages.add(new Message("user", messageText));
         chatGPTRequest.setMessages(messages);
         log.info("Отправляю запрос {}", chatGPTRequest);
         String response = chatRestClient.post(chatGPTRequest, gptToken).getBody().getChoices().get(0).getMessage().getContent();
-        mongoMessageRepository.save(new MongoMessage(telegramChatId, "assistant", response));
+        mongoMessageRepository.saveAll(
+                List.of(new MongoMessage(telegramChatId, "user", messageText),
+                        new MongoMessage(telegramChatId, "assistant", response)));
         updateUser(telegramChatId,index+1);
         return response;
     }
