@@ -3,6 +3,7 @@ package tydiru.bot.chatgpt.service;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -17,6 +18,7 @@ import tydiru.bot.chatgpt.db.repository.UserRepository;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 @Data
@@ -55,6 +57,13 @@ public class Telegram extends TelegramLongPollingBot {
             case "/clear":
                 mongoMessageRepository.deleteById(telegramChatId);
                 break;
+            case "/check":
+                List<MongoMessage> messageList = mongoMessageRepository.findByTelegramChatId(telegramChatId);
+                message.setText("Список вопросов: " + messageList.stream().map(MongoMessage::getContent).toString());
+                break;
+            case "/checkIndex":
+                message.setText("Index: " + getUsersIndex(telegramChatId));
+                break;
             default:
                 if (!checkGPTToken(telegramChatId)) {
                     saveUser(telegramChatId, messageText);
@@ -65,27 +74,9 @@ public class Telegram extends TelegramLongPollingBot {
                     chatGPTRequest.setModel("gpt-3.5-turbo");
                     Integer index = getUsersIndex(telegramChatId);
                     if (index == 0) {
-                        mongoMessageRepository.save(new MongoMessage(telegramChatId, "user", messageText));
-                        chatGPTRequest.setMessages(List.of(new Message("user", messageText)));
-                        String response = chatRestClient.post(chatGPTRequest, gptToken).getBody().getChoices().get(0).getMessage().getContent();
-                        mongoMessageRepository.save(new MongoMessage(telegramChatId, "assistent", response));
-                        updateUser(telegramChatId,index+1);
-                        message.setText(response);
+                        message.setText(firstQuestion(chatGPTRequest, messageText, telegramChatId, index));
                     } else if (index < 20) {
-                        mongoMessageRepository.save(new MongoMessage(telegramChatId, "user", messageText));
-                        List<MongoMessage> mongoMessages = mongoMessageRepository.findByTelegramChatId(telegramChatId);
-                        List<Message> messages = new ArrayList<>();
-                        for (MongoMessage mongoMessage : mongoMessages) {
-                            Message chatMessage = new Message();
-                            chatMessage.setContent(mongoMessage.getContent());
-                            chatMessage.setRole(mongoMessage.getRole());
-                            messages.add(chatMessage);
-                        }
-                        chatGPTRequest.setMessages(messages);
-                        String response = chatRestClient.post(chatGPTRequest, gptToken).getBody().getChoices().get(0).getMessage().getContent();
-                        mongoMessageRepository.save(new MongoMessage(telegramChatId, "assistent", response));
-                        updateUser(telegramChatId,index+1);
-                        message.setText(response);
+                        message.setText(otherMessages(chatGPTRequest, messageText, telegramChatId, index));
                     } else {
                         message.setText("Извините, лимит чата исччерпан, необходимо отчистить чат командой /clean");
                     }
@@ -96,6 +87,32 @@ public class Telegram extends TelegramLongPollingBot {
         } catch (TelegramApiException e) {
             throw new RuntimeException(e);
         }
+    }
+    @Transactional
+    String firstQuestion(ChatGPTRequest chatGPTRequest, String messageText, String telegramChatId, int index ) {
+        chatGPTRequest.setMessages(List.of(new Message("user", messageText)));
+        String response = chatRestClient.post(chatGPTRequest, gptToken).getBody().getChoices().get(0).getMessage().getContent();
+        mongoMessageRepository.save(new MongoMessage(telegramChatId, "user", messageText));
+        mongoMessageRepository.save(new MongoMessage(telegramChatId, "assistant", response));
+        updateUser(telegramChatId,index+1);
+        return response;
+    }
+    @Transactional
+    String otherMessages(ChatGPTRequest chatGPTRequest, String messageText, String telegramChatId, int index) {
+        mongoMessageRepository.save(new MongoMessage(telegramChatId, "user", messageText));
+        List<MongoMessage> mongoMessages = mongoMessageRepository.findByTelegramChatId(telegramChatId);
+        List<Message> messages = new ArrayList<>();
+        for (MongoMessage mongoMessage : mongoMessages) {
+            Message chatMessage = new Message();
+            chatMessage.setContent(mongoMessage.getContent());
+            chatMessage.setRole(mongoMessage.getRole());
+            messages.add(chatMessage);
+        }
+        chatGPTRequest.setMessages(messages);
+        String response = chatRestClient.post(chatGPTRequest, gptToken).getBody().getChoices().get(0).getMessage().getContent();
+        mongoMessageRepository.save(new MongoMessage(telegramChatId, "assistant", response));
+        updateUser(telegramChatId,index+1);
+        return response;
     }
 
     private boolean checkGPTToken(String telegramChatId) {
