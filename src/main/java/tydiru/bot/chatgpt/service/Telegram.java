@@ -54,14 +54,18 @@ public class Telegram extends TelegramLongPollingBot {
                 message.setText("Пожалуста отправьте ваш chatGPT токен");
                 break;
             case "/reset":
-                message.setText(saveUser(telegramChatId, null)?"Токен успешно сброшен":"Извините, не удалось сбросить токен");
+                message.setText(saveUser(telegramChatId, null) ? "Токен успешно сброшен":"Извините, не удалось сбросить токен");
                 break;
             case "/clear":
                 mongoMessageRepository.deleteById(telegramChatId);
+                updateUser(telegramChatId,0);
                 break;
             case "/check":
                 List<MongoMessage> messageList = mongoMessageRepository.findByTelegramChatId(telegramChatId);
                 message.setText("Список вопросов: " + messageList.stream().map(MongoMessage::getContent).toList());
+                break;
+            case "/checkAll":
+                message.setText("Список вопросов: " + mongoMessageRepository.findAll().stream().map(MongoMessage::getContent).toList());
                 break;
             case "/checkIndex":
                 message.setText("Index: " + getUsersIndex(telegramChatId));
