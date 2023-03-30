@@ -2,6 +2,7 @@ package tydiru.bot.chatgpt.service;
 
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -23,6 +24,7 @@ import java.util.stream.Collectors;
 @Component
 @Data
 @RequiredArgsConstructor
+@Slf4j
 public class Telegram extends TelegramLongPollingBot {
     private final UserRepository userRepository;
     private final ChatRestClient chatRestClient;
@@ -59,7 +61,7 @@ public class Telegram extends TelegramLongPollingBot {
                 break;
             case "/check":
                 List<MongoMessage> messageList = mongoMessageRepository.findByTelegramChatId(telegramChatId);
-                message.setText("Список вопросов: " + messageList.stream().map(MongoMessage::getContent).toString());
+                message.setText("Список вопросов: " + messageList.stream().map(MongoMessage::getContent).toList());
                 break;
             case "/checkIndex":
                 message.setText("Index: " + getUsersIndex(telegramChatId));
@@ -109,6 +111,7 @@ public class Telegram extends TelegramLongPollingBot {
             messages.add(chatMessage);
         }
         chatGPTRequest.setMessages(messages);
+        log.info("Отправляю запрос {}", chatGPTRequest);
         String response = chatRestClient.post(chatGPTRequest, gptToken).getBody().getChoices().get(0).getMessage().getContent();
         mongoMessageRepository.save(new MongoMessage(telegramChatId, "assistant", response));
         updateUser(telegramChatId,index+1);
