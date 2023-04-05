@@ -58,11 +58,15 @@ public class Telegram extends TelegramLongPollingBot {
                 message.setText(saveUser(telegramChatId, null) ? "Токен успешно сброшен":"Извините, не удалось сбросить токен");
                 break;
             case "/clear":
-                mongoMessageRepository.deleteById(telegramChatId);
+                mongoMessageRepository.deleteAllById(mongoMessageRepository.findByTelegramChatId(telegramChatId)
+                        .stream().map(MongoMessage::getId)
+                        .collect(Collectors.toList()));
                 updateUser(telegramChatId,0);
+                message.setText("Чат отчщиен");
                 break;
             case "/check":
                 List<MongoMessage> messageList = mongoMessageRepository.findByTelegramChatId(telegramChatId);
+                log.info("Нашли вопросы по chatId {}", messageList);
                 message.setText("Список вопросов: " + messageList.stream().map(MongoMessage::getContent).toList());
                 break;
             case "/checkAll":
@@ -151,6 +155,7 @@ public class Telegram extends TelegramLongPollingBot {
         Users users = userRepository.findByTelegramChatId(telegramChatId);
         return users != null ? users.getCurrentMessageIndex() : -1;
     }
+
 
     private void updateUser(String telegramChatId, Integer currentMessageIndex) {
         Users users = userRepository.findByTelegramChatId(telegramChatId);
