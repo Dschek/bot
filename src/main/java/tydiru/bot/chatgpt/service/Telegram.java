@@ -89,7 +89,7 @@ public class Telegram extends TelegramLongPollingBot {
                     } else if (index < 20) {
                         message.setText(otherMessages(chatGPTRequest, messageText, telegramChatId, index));
                     } else {
-                        message.setText("Извините, лимит чата исччерпан, необходимо отчистить чат командой /clean");
+                        message.setText("Извините, лимит чата исчерпан, необходимо отчистить чат командой /clean");
                     }
                 }
         }
@@ -101,34 +101,42 @@ public class Telegram extends TelegramLongPollingBot {
     }
     @Transactional
     String firstQuestion(ChatGPTRequest chatGPTRequest, String messageText, String telegramChatId, int index ) {
-        chatGPTRequest.setMessages(List.of(new Message("user", messageText)));
-        String response = postToGPT(chatGPTRequest, gptToken);
-        mongoMessageRepository.saveAll(
-                List.of(new MongoMessage(UUID.randomUUID().toString(), telegramChatId, "user", messageText),
-                        new MongoMessage(UUID.randomUUID().toString(), telegramChatId, "assistant", response)));
+        try {
+            chatGPTRequest.setMessages(List.of(new Message("user", messageText)));
+            String response = postToGPT(chatGPTRequest, gptToken);
+            mongoMessageRepository.saveAll(
+                    List.of(new MongoMessage(UUID.randomUUID().toString(), telegramChatId, "user", messageText),
+                            new MongoMessage(UUID.randomUUID().toString(), telegramChatId, "assistant", response)));
 
-        updateUser(telegramChatId,index+1);
-        return response;
+            updateUser(telegramChatId, index + 1);
+            return response;
+        } catch (Exception e) {
+            return e.toString();
+        }
     }
     @Transactional
     String otherMessages(ChatGPTRequest chatGPTRequest, String messageText, String telegramChatId, int index) {
-        List<MongoMessage> mongoMessages = mongoMessageRepository.findByTelegramChatId(telegramChatId);
-        List<Message> messages = new ArrayList<>();
-        for (MongoMessage mongoMessage : mongoMessages) {
-            Message chatMessage = new Message();
-            chatMessage.setContent(mongoMessage.getContent());
-            chatMessage.setRole(mongoMessage.getRole());
-            messages.add(chatMessage);
+        try {
+            List<MongoMessage> mongoMessages = mongoMessageRepository.findByTelegramChatId(telegramChatId);
+            List<Message> messages = new ArrayList<>();
+            for (MongoMessage mongoMessage : mongoMessages) {
+                Message chatMessage = new Message();
+                chatMessage.setContent(mongoMessage.getContent());
+                chatMessage.setRole(mongoMessage.getRole());
+                messages.add(chatMessage);
+            }
+            messages.add(new Message("user", messageText));
+            chatGPTRequest.setMessages(messages);
+            log.info("Отправляю запрос {}", chatGPTRequest);
+            String response = postToGPT(chatGPTRequest, gptToken);
+            mongoMessageRepository.saveAll(
+                    List.of(new MongoMessage(UUID.randomUUID().toString(), telegramChatId, "user", messageText),
+                            new MongoMessage(UUID.randomUUID().toString(), telegramChatId, "assistant", response)));
+            updateUser(telegramChatId, index + 1);
+            return response;
+        } catch (Exception e) {
+            return e.toString();
         }
-        messages.add(new Message("user", messageText));
-        chatGPTRequest.setMessages(messages);
-        log.info("Отправляю запрос {}", chatGPTRequest);
-        String response = postToGPT(chatGPTRequest, gptToken);
-        mongoMessageRepository.saveAll(
-                List.of(new MongoMessage(UUID.randomUUID().toString(), telegramChatId, "user", messageText),
-                        new MongoMessage(UUID.randomUUID().toString(), telegramChatId, "assistant", response)));
-        updateUser(telegramChatId,index+1);
-        return response;
     }
 
     String postToGPT(ChatGPTRequest chatGPTRequest, String gptToken) {
